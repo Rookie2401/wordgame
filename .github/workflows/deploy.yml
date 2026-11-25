@@ -53,12 +53,16 @@ jobs:
         env:
           # Both are public values by design (the key is the anon / publishable
           # key). Set them under Settings > Secrets and variables > Actions >
-          # Variables. Never put the service-role key here or anywhere in this repo.
-          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+          # Variables (Secrets also work). Never put the service-role key here or anywhere in this repo.
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY || secrets.VITE_SUPABASE_ANON_KEY }}
       - name: Fail if the backend settings are missing
+        env:
+          HAS_URL: ${{ (vars.VITE_SUPABASE_URL || secrets.VITE_SUPABASE_URL) != '' }}
+          HAS_KEY: ${{ (vars.VITE_SUPABASE_ANON_KEY || secrets.VITE_SUPABASE_ANON_KEY) != '' }}
         run: |
-          test -n "${{ vars.VITE_SUPABASE_URL }}" && test -n "${{ vars.VITE_SUPABASE_ANON_KEY }}"
+          echo "VITE_SUPABASE_URL set: $HAS_URL; VITE_SUPABASE_ANON_KEY set: $HAS_KEY"
+          test "$HAS_URL" = true && test "$HAS_KEY" = true
       # Invitation links are ?room=CODE on the index page, so they never 404.
       # The copy below covers anyone who mistypes a deeper path.
       - run: cp dist/index.html dist/404.html
