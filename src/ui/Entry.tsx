@@ -1,8 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { GameError, type Backend, type GameMode, type JoinResult } from '../backend/types';
+import { GameError, type Backend, type JoinResult } from '../backend/types';
 import { APP_NAME, CODE_LENGTH, MAX_NAME, messageFor, normalizeCode, validateName } from '../game/logic';
 import { load, save } from '../storage';
 import { Button, Flourish, Notice, Page } from './common';
+import { DEFAULT_RULES, RulesFields, rulesArgs, validateRules, type Rules } from './Settings';
 
 function describe(e: unknown): string {
   if (e instanceof GameError) return messageFor(e.code);
@@ -42,19 +43,20 @@ interface CreateProps {
 
 export function CreateGame({ backend, onDone, onBack }: CreateProps) {
   const [name, setName] = useState(() => load<string>('name') ?? '');
-  const [mode, setMode] = useState<GameMode>('digital');
+  const [rules, setRules] = useState<Rules>(() => ({ ...DEFAULT_RULES, ...(load<Partial<Rules>>('rules') ?? {}) }));
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    const bad = validateName(name);
+    const bad = validateName(name) ?? validateRules(rules);
     if (bad) return setError(bad);
     setWorking(true);
     setError(null);
     try {
-      const r = await backend.rpc<JoinResult>('create_room', { p_name: name, p_mode: mode });
+      const r = await backend.rpc<JoinResult>('create_room', { p_name: name, ...rulesArgs(rules) });
       save('name', name.trim());
+      save('rules', rules);
       onDone(r);
     } catch (err) {
       setError(describe(err));
@@ -79,23 +81,7 @@ export function CreateGame({ backend, onDone, onBack }: CreateProps) {
             onChange={(e) => setName(e.target.value)}
           />
         </label>
-        <fieldset className="field choice">
-          <legend className="label">Cards</legend>
-          <label className={`option ${mode === 'digital' ? 'option-on' : ''}`}>
-            <input type="radio" name="mode" checked={mode === 'digital'} onChange={() => setMode('digital')} />
-            <span>
-              <strong>Digital cards</strong>
-              <small>The app deals an unusual word each round.</small>
-            </span>
-          </label>
-          <label className={`option ${mode === 'physical' ? 'option-on' : ''}`}>
-            <input type="radio" name="mode" checked={mode === 'physical'} onChange={() => setMode('physical')} />
-            <span>
-              <strong>Physical cards</strong>
-              <small>The reader types in a card from the box.</small>
-            </span>
-          </label>
-        </fieldset>
+        <RulesFields value={rules} onChange={setRules} />
         {error && <Notice tone="warn">{error}</Notice>}
         <div className="stack">
           <Button type="submit" working={working}>

@@ -56,7 +56,10 @@ describe('direct database access', () => {
     expect(rows.map((r) => r.id)).toEqual([a.roomId]);
     expect(JSON.stringify(rows)).not.toContain(SECRET);
     expect(Object.keys(rows[0]).sort()).toEqual(
-      ['code', 'created_at', 'current_round_id', 'host_player_id', 'id', 'last_activity_at', 'mode', 'status', 'version'],
+      [
+        'code', 'created_at', 'current_round_id', 'game_number', 'host_player_id', 'id', 'last_activity_at', 'mode',
+        'rotation_limit', 'ruleset', 'scoring', 'status', 'target_score', 'version', 'win_type',
+      ], // the added columns are the room's public options; none is secret
     );
     expect(await db.queryAs(randomUUID(), `select * from public.rooms`)).toEqual([]);
     expect(await db.queryAs(null, `select 1 from public.rooms`).catch(() => [])).toEqual([]);

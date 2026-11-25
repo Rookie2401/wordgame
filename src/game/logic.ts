@@ -68,8 +68,15 @@ export type Screen =
   | 'submit-player'
   | 'submitted'
   | 'sitting-out'
+  | 'adjudicate-reader'
+  | 'adjudicate-waiting'
   | 'reading-reader'
   | 'reading-waiting'
+  | 'vote-reader'
+  | 'vote-ballot'
+  | 'vote-waiting'
+  | 'reveal-staged'
+  | 'results'
   | 'reveal';
 
 /** Which view a player should see, from the authoritative snapshot alone. */
@@ -85,8 +92,19 @@ export function screenFor(s: Snapshot): Screen {
       if (reader) return 'submit-reader';
       if (!r.eligible) return 'sitting-out';
       return r.my_submission == null ? 'submit-player' : 'submitted';
+    case 'adjudicating':
+      return reader ? 'adjudicate-reader' : 'adjudicate-waiting';
     case 'reading':
       return reader ? 'reading-reader' : 'reading-waiting';
+    case 'voting':
+      if (reader) return 'vote-reader';
+      return r.can_vote ? 'vote-ballot' : 'vote-waiting';
+    case 'voting_closed':
+      return 'reveal-staged';
+    case 'reveal':
+      return s.room.scoring === 'digital' ? 'reveal-staged' : 'reveal';
+    case 'results':
+      return 'results';
     default:
       return 'reveal';
   }
@@ -99,7 +117,54 @@ export function progress(s: Snapshot): { ready: number; total: number } {
   return { ready: r.submitted_count + (r.reader_done ? 1 : 0), total: r.required_count + 1 };
 }
 
+/** "Daniel", "Daniel and Sarah", "Daniel, Sarah and James". */
+export function listNames(names: string[]): string {
+  if (names.length <= 1) return names[0] ?? '';
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
+
+export function points(n: number): string {
+  return `${n} ${Math.abs(n) === 1 ? 'point' : 'points'}`;
+}
+
+export function signed(n: number): string {
+  return n > 0 ? `+${n}` : `${n}`;
+}
+
+export const TARGET_CHOICES = [15, 25, 50, 100];
+export const ROTATION_CHOICES = [1, 2, 3, 5];
+
+/** One line describing how the game ends, for the lobby and the scoreboard. */
+export function describeEnding(room: Snapshot['room']): string {
+  if (room.win_type === 'target') return `First to ${room.target_score ?? 25} points, then the rotation is finished`;
+  if (room.win_type === 'rotations') {
+    const n = room.rotation_limit ?? 1;
+    return n === 1 ? 'One turn as reader each' : `${n} turns as reader each`;
+  }
+  return 'Play until the host ends the game';
+}
+
+export const CATEGORY_LABEL: Record<string, string> = {
+  CORRECT_GUESS: 'Correct Guess',
+  SUCCESSFUL_DECEPTION: 'Successful Deception',
+  CORRECT_WRITTEN_DEFINITION: 'Correct Written Definition',
+  READER_BONUS: 'Reader Bonus',
+  MANUAL_ADJUSTMENT: 'Score Adjustment',
+};
+
 const MESSAGES: Record<string, string> = {
+  voting_closed: 'Voting has closed for this round.',
+  not_eligible_to_vote: 'You are not voting in this round.',
+  own_definition: 'You cannot vote for your own definition.',
+  invalid_definition_id: 'That definition is not on this ballot.',
+  voting_not_closed: 'Voting has to close before the answers are revealed.',
+  not_ready_to_vote: 'The definitions are not ready yet.',
+  cannot_adjudicate_own: 'You cannot mark your own definition.',
+  invalid_points: 'Enter a number of points between -100 and 100, not zero.',
+  invalid_note: 'Please give a short reason (up to 120 characters).',
+  invalid_target: 'Choose a target between 5 and 1000 points.',
+  invalid_rotations: 'Choose between 1 and 50 rotations.',
+  game_in_progress: 'A game is still in progress.',
   room_not_found: 'That game could not be found. It may have ended or expired.',
   removed_from_room: 'The host has removed you from this game.',
   not_member: 'You are no longer part of this game.',

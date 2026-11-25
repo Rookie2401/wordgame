@@ -2,11 +2,13 @@
 
 A phone-browser companion for playing the dictionary bluffing game in person. It replaces the slips of paper: the
 reader gets the card privately, everyone types a definition, the app shuffles them anonymously for the reader to
-read aloud, and reveals the answer and the authors when asked. Voting is aloud and scores stay on paper.
+read aloud, players vote privately on their phones, and the app reveals the answers, awards the points and keeps
+the standings. A traditional mode keeps voting aloud and scores on paper.
 
 "Balderdash" is a working title only. See [docs/BRANDING.md](docs/BRANDING.md) before sharing this publicly.
 
-- No app download, no accounts, no scoring, no voting, no ads, no tracking.
+- No app download, no accounts, no ads, no tracking.
+- Voting and scoring: see [docs/SCORING.md](docs/SCORING.md).
 - React + TypeScript + Vite front end on GitHub Pages; Supabase (Postgres, Realtime, anonymous sign-in) behind it.
 - All game rules run in the database. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
@@ -14,13 +16,12 @@ read aloud, and reveals the answer and the authors when asked. Voting is aloud a
 
 | Part | State |
 | --- | --- |
-| Game engine (SQL), both card modes | Built; 64 unit and database tests pass |
+| Game engine (SQL), both card modes, traditional and scored play | Built; 159 unit and database tests pass |
 | Interface, all screens | Built; checked at phone, tablet and desktop sizes |
-| Five-browser full game, reconnection, expiry | Passes locally against the real SQL in an in-process Postgres |
+| Traditional game: five browsers, reconnection, expiry | Passes locally; passed against production on 2026-11-24 |
+| Scored game: six browsers, voting, scoring, target ending, rematch | Passes locally; **not yet run against production** |
 | Word list | 3,000 entries from Webster 1913, machine-filtered, **not proofread by a person** |
-| Supabase project | **Not created yet** — steps below |
-| GitHub Pages deployment | **Not done yet** — steps below |
-| Game played against production | **Not done yet** — command below |
+| Live site | https://rookie2401.github.io/wordgame/ — runs the version **before** voting and scoring until the new migration is applied and this code is pushed |
 
 The local tests exercise the same migrations that run on Supabase, but through a small stand-in server
 (`dev-server/`), not through Supabase's own API, sign-in or Realtime. Those three are only proven by the production
@@ -60,7 +61,8 @@ Nothing here needs a secret key in this repository.
 3. **SQL Editor:** run these files in order, each as one query:
    1. `supabase/migrations/20261124000001_schema.sql`
    2. `supabase/migrations/20261124000002_functions.sql`
-   3. `supabase/seed/words.sql` (only needed for Digital Card mode)
+   3. `supabase/migrations/20261125000001_voting_scoring.sql`
+   4. `supabase/seed/words.sql` (only needed for Digital Card mode)
 4. **Database → Publications:** confirm `supabase_realtime` lists the `rooms` table and nothing else from this
    app. (The schema migration adds it.)
 5. Optional, for tidy cleanup when nobody is creating rooms: enable the `pg_cron` extension and run
@@ -91,6 +93,13 @@ $env:E2E_BASE_URL = 'https://<user>.github.io/<repo>/'; npx playwright test game
 
 Then do it once for real: open the site on a phone, create a game, scan the QR code with two other phones and
 play two rounds.
+
+### Updating a live project
+
+Run any new migration file in the SQL editor **before** pushing the matching front end, so the site never calls a
+function the database does not have yet. Migrations are written so that the previous front end keeps working in
+between: rooms in progress keep their flow, and a copy of the app that has not refreshed yet still gets the game it
+knows.
 
 ## Environment variables
 

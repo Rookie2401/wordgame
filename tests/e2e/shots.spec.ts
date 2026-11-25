@@ -14,6 +14,7 @@ test('screens', async ({ browser }) => {
   await shot(a, '01-home');
   await a.getByRole('button', { name: 'Create Game' }).click();
   await a.getByLabel('Your name').fill('Daniel');
+  await a.getByText('Traditional', { exact: true }).click();
   await shot(a, '02-create');
   await a.getByRole('button', { name: 'Create', exact: true }).click();
   const code = (await a.locator('.code').innerText()).trim();

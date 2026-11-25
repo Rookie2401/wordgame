@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import type { Snapshot } from '../backend/types';
-import { MIN_PLAYERS, inviteUrl } from '../game/logic';
+import { MIN_PLAYERS, describeEnding, inviteUrl } from '../game/logic';
 import type { RoomHandle } from '../sync/useRoom';
-import { Button, Confirm, Flourish, Page, QrCode } from './common';
+import { Button, Confirm, Dialog, Flourish, Notice, Page, QrCode } from './common';
+import { RulesFields, rulesArgs, rulesFromRoom, validateRules, type Rules } from './Settings';
 
 export function Invite({ code }: { code: string }) {
   const url = inviteUrl(code);
@@ -33,6 +34,16 @@ export function Invite({ code }: { code: string }) {
 
 export function Lobby({ s, room }: { s: Snapshot; room: RoomHandle }) {
   const [removing, setRemoving] = useState<string | null>(null);
+  const [editing, setEditing] = useState<Rules | null>(null);
+  const [rulesError, setRulesError] = useState<string | null>(null);
+
+  async function saveRules() {
+    if (!editing) return;
+    const bad = validateRules(editing);
+    setRulesError(bad);
+    if (bad) return;
+    if (await room.act('update_settings', { p_room_id: s.room.id, ...rulesArgs(editing) })) setEditing(null);
+  }
   const host = s.me.is_host;
   const count = s.players.length;
   const ids = s.players.map((p) => p.id);
@@ -58,6 +69,21 @@ export function Lobby({ s, room }: { s: Snapshot; room: RoomHandle }) {
           {count} {count === 1 ? 'player' : 'players'}
         </span>
       </p>
+      <p className="meta" data-testid="rules">
+        {s.room.scoring === 'digital' ? 'Votes and scores in the app' : 'Vote aloud, score on paper'} ·{' '}
+        {describeEnding(s.room)}
+        {host && (
+          <>
+            {' '}
+            <button className="link" onClick={() => setEditing(rulesFromRoom(s.room))}>
+              Change
+            </button>
+          </>
+        )}
+      </p>
+      {s.room.game_number > 1 && (
+        <p className="hint center">A new game with the same company. Scores begin again at nought.</p>
+      )}
       <ol className="players" aria-label="Players, in reading order">
         {s.players.map((p, i) => (
           <li key={p.id} className="player">
@@ -108,6 +134,22 @@ export function Lobby({ s, room }: { s: Snapshot; room: RoomHandle }) {
           <p className="waiting">Waiting for the host to begin…</p>
         )}
       </div>
+      <Dialog open={!!editing} onClose={() => setEditing(null)} title="Game options">
+        {editing && (
+          <div className="form">
+            <RulesFields value={editing} onChange={setEditing} />
+            {rulesError && <Notice tone="warn">{rulesError}</Notice>}
+            <div className="stack">
+              <Button working={room.busy === 'update_settings'} onClick={saveRules}>
+                Save options
+              </Button>
+              <Button variant="quiet" onClick={() => setEditing(null)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+      </Dialog>
       <Confirm
         open={!!target}
         title="Remove player"

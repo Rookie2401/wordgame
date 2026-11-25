@@ -26,9 +26,13 @@ This is simpler than the usual per-table RLS policies plus per-table realtime su
 policy whose mistake could leak a definition: the tables grant nothing to clients at all. RLS is still enabled on
 every table as a second barrier (tested by granting SELECT and confirming zero rows come back).
 
+Voting, scoring, winning conditions and rematches are described in [SCORING.md](SCORING.md). They use the
+same mechanisms as everything below.
+
 ## State machine
 
-Room: `lobby → playing → ended`. Round: `card_selection → collecting → reading → reveal → done`.
+Room: `lobby → playing → ended` (and back to `lobby` for a rematch). Traditional round:
+`card_selection → collecting → reading → reveal → done`. Scored round: see SCORING.md.
 The brief's NEXT_ROUND is the `reveal → done` transition, which creates the next round in the same transaction.
 
 | Transition | Who | Function |

@@ -39,6 +39,8 @@ async function createRoom(host: Seat, mode: 'Digital cards' | 'Physical cards'):
   await host.page.getByRole('button', { name: 'Create Game' }).click();
   await host.page.getByLabel('Your name').fill(host.name);
   await host.page.getByText(mode, { exact: true }).click();
+  // These scenarios cover the original paper-and-voice game; scoring.spec.ts covers voting in the app.
+  await host.page.getByText('Traditional', { exact: true }).click();
   await host.page.getByRole('button', { name: 'Create', exact: true }).click();
   const code = (await host.page.locator('.code').innerText()).trim();
   expect(code).toMatch(/^[A-Z2-9]{5}$/);

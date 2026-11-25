@@ -3,7 +3,24 @@
 
 export type GameMode = 'physical' | 'digital';
 export type RoomStatus = 'lobby' | 'playing' | 'ended';
-export type RoundState = 'card_selection' | 'collecting' | 'reading' | 'reveal' | 'done';
+export type RoundState =
+  | 'card_selection'
+  | 'collecting'
+  | 'adjudicating'
+  | 'reading'
+  | 'voting'
+  | 'voting_closed'
+  | 'reveal'
+  | 'results'
+  | 'done';
+export type ScoringMode = 'digital' | 'traditional';
+export type WinType = 'target' | 'rotations' | 'unlimited';
+export type ScoreCategory =
+  | 'CORRECT_GUESS'
+  | 'SUCCESSFUL_DECEPTION'
+  | 'CORRECT_WRITTEN_DEFINITION'
+  | 'READER_BONUS'
+  | 'MANUAL_ADJUSTMENT';
 
 export interface PlayerInfo {
   id: string;
@@ -17,7 +34,12 @@ export interface DefinitionItem {
   id: string;
   position: number;
   text: string;
-  // Present only after the reveal:
+  /** The caller's own definition (shown to them alone). */
+  mine?: boolean;
+  /** Digital scoring: 0 hidden, 1 voters shown, 2 author and correctness shown. */
+  stage?: number;
+  voters?: string[];
+  // Present only once revealed:
   is_correct?: boolean;
   author_id?: string | null;
   author_name?: string | null;
@@ -43,16 +65,79 @@ export interface RoundInfo {
   part_of_speech?: string | null;
   reader_skipped?: boolean;
   submitted_player_ids?: string[];
-  // Reader while reading; everyone after the reveal:
+  // Reader while reading; voters while voting; everyone after the reveal:
   definitions?: DefinitionItem[];
+  rotation?: number;
+  // Reader, while adjudicating:
+  adjudication?: { submission_id: string; text: string; correct: boolean }[];
+  // Voting:
+  can_vote?: boolean;
+  voters_total?: number;
+  votes_cast?: number;
+  my_vote?: string | null;
+  voters?: { id: string; name: string; voted: boolean }[];
+  // Settled round:
+  is_final?: boolean;
+  reader_bonus?: boolean;
+  written_correct?: { name: string; text: string }[];
+  abstained?: string[];
+  my_result?: {
+    round_points: number;
+    previous: number;
+    total: number;
+    items: { category: ScoreCategory; points: number; voters: string[] | null }[];
+  };
+}
+
+export interface Standing {
+  player_id: string;
+  name: string;
+  total: number;
+  last: number;
+  rank: number;
+}
+
+export interface Award {
+  key: 'great_deceiver' | 'lexicographer' | 'master_reader' | 'scholar' | 'convincing_bluff';
+  count: number;
+  names?: string[];
+  bluffs?: { name: string; text: string }[];
+}
+
+export interface PlayerStats {
+  correct_guesses: number;
+  incorrect_guesses: number;
+  abstentions: number;
+  votes_received: number;
+  reader_rounds: number;
+  reader_bonuses: number;
+  correct_written: number;
+  best_bluff_votes: number;
 }
 
 export interface Snapshot {
   version: number;
-  room: { id: string; code: string; mode: GameMode; status: RoomStatus; host_player_id: string | null };
+  room: {
+    id: string;
+    code: string;
+    mode: GameMode;
+    status: RoomStatus;
+    host_player_id: string | null;
+    scoring: ScoringMode;
+    win_type: WinType;
+    target_score: number | null;
+    rotation_limit: number | null;
+    game_number: number;
+  };
   me: { id: string; name: string; is_host: boolean; is_reader: boolean };
   players: PlayerInfo[];
   round: RoundInfo | null;
+  // Digital scoring only:
+  standings?: Standing[];
+  completed_rounds?: number;
+  final_rotation?: boolean;
+  adjustments?: { name: string; points: number; note: string }[];
+  final?: { winners: string[]; awards: Award[]; my_stats: PlayerStats };
 }
 
 export interface JoinResult {

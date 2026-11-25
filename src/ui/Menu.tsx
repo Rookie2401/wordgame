@@ -3,6 +3,7 @@ import type { PlayerInfo, Snapshot } from '../backend/types';
 import type { RoomHandle } from '../sync/useRoom';
 import { Button, Confirm, Dialog, Notice } from './common';
 import { Invite } from './Lobby';
+import { messageFor } from '../game/logic';
 
 interface Props {
   s: Snapshot;
@@ -21,6 +22,25 @@ export function GameMenu({ s, room, open, onClose, onLeft }: Props) {
   const [pending, setPending] = useState<Pending | null>(null);
   const [rejoin, setRejoin] = useState<{ name: string; code: string } | null>(null);
   const [showInvite, setShowInvite] = useState(false);
+  const [adjusting, setAdjusting] = useState<PlayerInfo | null>(null);
+  const [adjPoints, setAdjPoints] = useState('');
+  const [adjNote, setAdjNote] = useState('');
+  const canAdjust = s.room.scoring === 'digital' && s.room.status !== 'lobby';
+
+  async function adjust() {
+    if (!adjusting) return;
+    const ok = await room.act('adjust_score', {
+      p_room_id: s.room.id,
+      p_player_id: adjusting.id,
+      p_points: Number.parseInt(adjPoints, 10) || 0,
+      p_note: adjNote,
+    });
+    if (ok) {
+      setAdjusting(null);
+      setAdjPoints('');
+      setAdjNote('');
+    }
+  }
 
   const host = s.me.is_host;
   const round = s.round;
@@ -103,7 +123,7 @@ export function GameMenu({ s, room, open, onClose, onLeft }: Props) {
 
   return (
     <>
-      <Dialog open={open && !pending} onClose={onClose} title="Game menu">
+      <Dialog open={open && !pending && !adjusting} onClose={onClose} title="Game menu">
         <p className="meta">
           Room <span className="code-inline">{s.room.code}</span>
         </p>
@@ -128,7 +148,7 @@ export function GameMenu({ s, room, open, onClose, onLeft }: Props) {
               <button
                 className="player-row"
                 aria-expanded={selected === p.id}
-                disabled={!host || p.id === s.me.id}
+                disabled={!host || (p.id === s.me.id && !canAdjust)}
                 onClick={() => setSelected(selected === p.id ? null : p.id)}
               >
                 <span className={`dot ${p.connected ? 'dot-on' : 'dot-off'}`} aria-hidden="true" />
@@ -140,8 +160,20 @@ export function GameMenu({ s, room, open, onClose, onLeft }: Props) {
                   {!p.connected && <em className="tag">away</em>}
                 </span>
               </button>
-              {host && selected === p.id && (
+              {host && selected === p.id && p.id === s.me.id && canAdjust && (
                 <div className="player-actions">
+                  <Button variant="secondary" onClick={() => setAdjusting(p)}>
+                    Correct score
+                  </Button>
+                </div>
+              )}
+              {host && selected === p.id && p.id !== s.me.id && (
+                <div className="player-actions">
+                  {canAdjust && (
+                    <Button variant="secondary" onClick={() => setAdjusting(p)}>
+                      Correct score
+                    </Button>
+                  )}
                   {playing && p.id !== round?.reader_id && round?.state !== 'done' && (
                     <Button variant="secondary" onClick={() => setPending({ kind: 'reader', player: p })}>
                       Make reader
@@ -193,6 +225,38 @@ export function GameMenu({ s, room, open, onClose, onLeft }: Props) {
           </Button>
           <Button onClick={onClose}>Back to the game</Button>
         </div>
+      </Dialog>
+      <Dialog open={!!adjusting} onClose={() => setAdjusting(null)} title="Correct a score">
+        {adjusting && (
+          <div className="form">
+            <p className="dialog-text">
+              Add or take away points for {adjusting.name}. The correction is recorded with your reason and everyone can
+              see it.
+            </p>
+            <label className="field">
+              <span className="label">Points (use a minus sign to take away)</span>
+              <input
+                className="input"
+                inputMode="text"
+                value={adjPoints}
+                onChange={(e) => setAdjPoints(e.target.value.replace(/[^0-9-]/g, ''))}
+              />
+            </label>
+            <label className="field">
+              <span className="label">Reason</span>
+              <input className="input" maxLength={120} value={adjNote} onChange={(e) => setAdjNote(e.target.value)} />
+            </label>
+            {room.error && <Notice tone="warn">{messageFor(room.error)}</Notice>}
+            <div className="stack">
+              <Button working={room.busy === 'adjust_score'} onClick={adjust}>
+                Record correction
+              </Button>
+              <Button variant="quiet" onClick={() => setAdjusting(null)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
       </Dialog>
       {pending && (
         <Confirm

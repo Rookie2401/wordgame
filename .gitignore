@@ -7,3 +7,4 @@ test-results
 playwright-report
 *.log
 !.env.e2e
+.vitest

@@ -364,19 +364,24 @@ export function ReaderSubmit({ s, round, room }: Props) {
 
 // --------------------------------------------------------- reading stage --
 
-export function ReadingWaiting({ round }: Props) {
+export function ReadingWaiting({ s, round }: Props) {
   return (
     <Page label="Reading">
       <RoundHeader round={round} />
       <p className="waiting" data-testid="status">
         The reader is presenting the definitions.
       </p>
-      <p className="hint center">Listen, then vote aloud.</p>
+      <p className="hint center">
+        {s.room.scoring === 'digital'
+          ? 'Listen closely. You will vote when the reader has finished.'
+          : 'Listen, then vote aloud.'}
+      </p>
     </Page>
   );
 }
 
-export function ReadingReader({ round, room }: Props) {
+export function ReadingReader({ s, round, room }: Props) {
+  const digital = s.room.scoring === 'digital';
   const defs = round.definitions ?? [];
   const [single, setSingle] = useState(() => load<boolean>('reading.single') ?? false);
   const [index, setIndex] = useState(0);
@@ -429,11 +434,19 @@ export function ReadingReader({ round, room }: Props) {
         </ol>
       )}
 
-      <p className="hint center">Read each aloud, take the votes, then reveal.</p>
+      <p className="hint center">
+        {digital ? 'Read each aloud, then open the voting.' : 'Read each aloud, take the votes, then reveal.'}
+      </p>
       <div className="stack">
-        <Button working={room.busy === 'reveal_answers'} onClick={() => setConfirming(true)}>
-          Reveal Answers
-        </Button>
+        {digital ? (
+          <Button working={room.busy === 'open_voting'} onClick={() => room.act('open_voting', { p_round_id: round.id })}>
+            Open Voting
+          </Button>
+        ) : (
+          <Button working={room.busy === 'reveal_answers'} onClick={() => setConfirming(true)}>
+            Reveal Answers
+          </Button>
+        )}
       </div>
       <Confirm
         open={confirming}

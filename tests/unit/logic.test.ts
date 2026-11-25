@@ -24,7 +24,10 @@ function snap(over: Omit<Partial<Snapshot>, 'round'> & { round?: Partial<RoundIn
         };
   return {
     version: 1,
-    room: { id: 'room', code: 'ABCDE', mode: 'physical', status: 'playing', host_player_id: 'p1', ...over.room },
+    room: {
+      id: 'room', code: 'ABCDE', mode: 'physical', status: 'playing', host_player_id: 'p1', scoring: 'traditional',
+      win_type: 'unlimited', target_score: null, rotation_limit: null, game_number: 1, ...over.room,
+    },
     me: { id: 'p2', name: 'Bob', is_host: false, is_reader: !!over.reader },
     players: [],
     round,
