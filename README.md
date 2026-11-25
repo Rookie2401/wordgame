@@ -72,8 +72,8 @@ Nothing here needs a secret key in this repository.
 
 1. Push this repository to GitHub.
 2. **Settings → Pages → Source: GitHub Actions.**
-3. **Settings → Secrets and variables → Actions → Variables:** add `VITE_SUPABASE_URL` and
-   `VITE_SUPABASE_ANON_KEY`.
+3. Put the project URL and the publishable key in the Build step of `.github/workflows/deploy.yml` (both are
+   public values; never the secret key).
 4. Push to `main` (or run the "Test and deploy" workflow by hand). It type-checks, runs every test, builds and
    publishes. The site is served over HTTPS at `https://<user>.github.io/<repo>/`.
 
