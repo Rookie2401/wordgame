@@ -37,7 +37,11 @@ export function useRoom(backend: Backend, roomId: string): RoomHandle {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const versionRef = useRef(0);
-  const busyRef = useRef(false);
+  // Actions run one at a time, in the order tapped. A repeat of an action that
+  // is already waiting is dropped (a double tap); a different action queues
+  // behind it rather than being lost.
+  const queueRef = useRef<Promise<unknown>>(Promise.resolve());
+  const pendingRef = useRef(new Set<string>());
   const aliveRef = useRef(true);
 
   const apply = useCallback((s: Snapshot) => {
@@ -89,8 +93,12 @@ export function useRoom(backend: Backend, roomId: string): RoomHandle {
 
   const call = useCallback(
     async <T,>(fn: string, args: Record<string, unknown> = {}): Promise<T | null> => {
-      if (busyRef.current) return null; // a second tap while the first is in flight
-      busyRef.current = true;
+      if (pendingRef.current.has(fn)) return null; // a second tap while the first is in flight
+      pendingRef.current.add(fn);
+      const before = queueRef.current;
+      let release!: () => void;
+      queueRef.current = new Promise<void>((r) => (release = r));
+      await before;
       setBusy(fn);
       setError(null);
       try {
@@ -109,8 +117,9 @@ export function useRoom(backend: Backend, roomId: string): RoomHandle {
         }
         return null;
       } finally {
-        busyRef.current = false;
-        if (aliveRef.current) setBusy(null);
+        pendingRef.current.delete(fn);
+        if (aliveRef.current && pendingRef.current.size === 0) setBusy(null);
+        release();
       }
     },
     [backend, apply, refresh],
