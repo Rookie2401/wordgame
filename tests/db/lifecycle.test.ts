@@ -103,7 +103,8 @@ describe('host hand-over', () => {
     await t.as(1, 'submit_definition', { p_round_id: roundId, p_text: 'kept text' });
     await t.as(0, 'leave_room', { p_room_id: t.roomId });
     const s = await t.state(1);
-    expect(s.round).toMatchObject({ id: roundId, reader_name: 'P2', word: 'w', correct_definition: 'kept answer', my_submission: 'kept text' });
+    expect(s.round).toMatchObject({ id: roundId, reader_name: 'P2', word: 'w', correct_definition: 'kept answer', my_submission: null });
+    // P2's earlier guess is dropped on becoming reader; the others' texts are untouched.
   });
 
   it('the last player leaving ends the room', async () => {

@@ -48,7 +48,7 @@ test('voting and scoring screens', async ({ browser }) => {
       await pages[i].getByLabel('What do you think this word means?').fill(bluffs[i] || 'A tax once levied upon windows facing the street.');
       await pages[i].getByRole('button', { name: 'Submit Definition' }).click();
     }
-    await reader.getByRole('button', { name: 'Skip', exact: true }).click();
+    await reader.getByRole('button', { name: 'Use the Card’s Wording' }).click();
     await reader.getByTestId('adjudicable').first().waitFor();
     if (k === 0) {
       await shot(a, '22-adjudication');

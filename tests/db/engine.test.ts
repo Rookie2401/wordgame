@@ -121,7 +121,7 @@ describe('reader rotation', () => {
     expect(s.round!.reader_name).toBe('P3');
   });
 
-  it('replacing the reader mid-round keeps the word and submissions', async () => {
+  it('replacing the reader mid-round keeps the word and the other players’ submissions', async () => {
     const t = await table(db, 4);
     const { roundId } = await toCollecting(t, 'quire', 'true meaning');
     await t.as(1, 'submit_definition', { p_round_id: roundId, p_text: 'from P2' });
@@ -134,11 +134,13 @@ describe('reader rotation', () => {
     expect((await t.state(2)).round!.correct_definition).toBe('true meaning');
     expect((await t.state(0)).round!.correct_definition).toBeUndefined();
     expect(await code(t.as(0, 'submit_definition', { p_round_id: roundId, p_text: 'x' }))).toBe('not_eligible');
-    // P4 is the only one still expected; then the round closes by itself.
+    // What the new reader wrote as a guess is dropped: a reader's text is read out as the answer.
+    expect((await t.state(2)).round!.my_submission).toBeNull();
     const after = await t.as(3, 'submit_definition', { p_round_id: roundId, p_text: 'from P4' });
-    expect(after.round!.state).toBe('reading');
+    expect(after.round!.state).toBe('collecting'); // the new reader has yet to choose a wording
+    await t.as(2, 'reader_skip', { p_round_id: roundId });
     const list = (await t.state(2)).round!.definitions!;
-    expect(list.map((d) => d.text).sort()).toEqual(['from P2', 'from P3', 'from P4', 'true meaning']);
+    expect(list.map((d) => d.text).sort()).toEqual(['from P2', 'from P4', 'true meaning']);
     // Next round continues after the originally scheduled reader.
     await t.as(2, 'reveal_answers', { p_round_id: roundId });
     expect((await t.as(2, 'next_round', { p_round_id: roundId })).round!.reader_name).toBe('P2');
@@ -224,9 +226,10 @@ describe('round lifecycle', () => {
     await t.as(2, 'submit_definition', { p_round_id: roundId, p_text: 'b' });
     let s = await t.as(3, 'submit_definition', { p_round_id: roundId, p_text: 'c' });
     expect(s.round).toMatchObject({ state: 'collecting', submitted_count: 3, required_count: 3, reader_done: false });
-    s = await t.as(0, 'submit_definition', { p_round_id: roundId, p_text: 'reader bluff' });
+    s = await t.as(0, 'submit_definition', { p_round_id: roundId, p_text: 'the reader’s own wording' });
     expect(s.round!.state).toBe('reading');
-    expect(s.round!.definitions).toHaveLength(5);
+    // Three players' definitions and the genuine one, in the reader's wording instead of the card's.
+    expect(s.round!.definitions!.map((d) => d.text).sort()).toEqual(['a', 'b', 'c', 'the reader’s own wording']);
   });
 
   it('reader may skip; the correct definition appears exactly once', async () => {
@@ -256,7 +259,7 @@ describe('round lifecycle', () => {
     expect(defs.filter((d) => d.text === 'twin').map((d) => d.author_name).sort()).toEqual(['P3', 'P4']);
   });
 
-  it('reveal shows the same order with authors, to everyone, and marks the reader’s own', async () => {
+  it('reveal shows the same order with authors, to everyone; the reader’s wording is the correct definition', async () => {
     const t = await table(db, 3);
     const { roundId } = await toCollecting(t, 'w', 'truth');
     await t.as(1, 'submit_definition', { p_round_id: roundId, p_text: 'p2' });
@@ -267,8 +270,10 @@ describe('round lifecycle', () => {
     for (const i of [0, 1, 2]) {
       const defs = (await t.state(i)).round!.definitions!;
       expect(defs.map((d) => d.id)).toEqual(order);
-      expect(defs.find((d) => d.text === 'mine')).toMatchObject({ by_reader: true, author_name: 'P1', is_correct: false });
-      expect(defs.find((d) => d.text === 'truth')).toMatchObject({ is_correct: true, author_id: null });
+      expect(defs).toHaveLength(3);
+      expect(defs.find((d) => d.text === 'mine')).toMatchObject({ is_correct: true, author_id: null, by_reader: false });
+      expect(defs.find((d) => d.text === 'truth')).toBeUndefined(); // the card's wording is not a separate entry
+      expect((await t.state(i)).round!.card_definition).toBe('truth'); // but everyone is told it at the reveal
     }
   });
 

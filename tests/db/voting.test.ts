@@ -150,12 +150,12 @@ describe('the ballot', () => {
 
   it('is the same list, in the same order, for the reader and for every voter, and stays stable', async () => {
     const t = await scoredTable(db, 5);
-    const ctx = await prepareReading(t, { readerWrites: 'lie of the reader' });
+    const ctx = await prepareReading(t);
     await openVoting(t, ctx);
     const strip = (defs: any[]) => defs.map((d) => ({ id: d.id, position: d.position, text: d.text }));
     const readerView = strip(((await t.state(0)) as any).round.definitions);
-    expect(readerView).toHaveLength(6); // genuine + 4 writers + the reader's own
-    expect(readerView.map((d) => d.position)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(readerView).toHaveLength(5); // genuine + 4 writers
+    expect(readerView.map((d) => d.position)).toEqual([1, 2, 3, 4, 5]);
     for (const i of [1, 2, 3, 4]) {
       const first = strip(((await t.state(i)) as any).round.definitions);
       expect(first, `player ${i}`).toEqual(readerView);

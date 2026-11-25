@@ -335,6 +335,10 @@ end $$;
 
 -- Shuffles the correct definition with every submission that was not accepted
 -- as correct. Runs once per round, inside the room lock.
+--
+-- The reader does not write a bluff. If the reader submits anything, it is the
+-- real definition put in their own words, and that wording takes the card
+-- definition's place: it is what is read out, voted on and revealed as correct.
 create or replace function private.shuffle_round(p_round_id uuid) returns void
 language plpgsql volatile set search_path = public, pg_temp as $$
 declare
@@ -351,11 +355,16 @@ begin
   if r.state not in ('collecting', 'adjudicating') then return; end if;
   select definition into v_correct from public.round_secrets where round_id = p_round_id;
   if v_correct is null then perform private.fail('card_missing'); end if;
+  select coalesce((select s3.body from public.submissions s3
+                    where s3.round_id = p_round_id and s3.player_id = r.reader_id), v_correct)
+    into v_correct;
 
   select coalesce(array_agg(s2.id order by s2.id), '{}') into v_ids
     from public.submissions s2
     join public.players p on p.id = s2.player_id
    where s2.round_id = p_round_id and p.state <> 'removed'
+     and s2.player_id <> r.reader_id
+     and not (s2.player_id = any (r.former_reader_ids))
      and not exists (select 1 from public.adjudications a where a.submission_id = s2.id);
 
   n := coalesce(array_length(v_ids, 1), 0) + 1;
@@ -401,7 +410,8 @@ begin
   select scoring into v_scoring from public.rooms where id = r.room_id;
   if v_scoring = 'digital' and exists (
        select 1 from public.submissions s join public.players p on p.id = s.player_id
-        where s.round_id = p_round_id and s.player_id <> r.reader_id and p.state <> 'removed') then
+        where s.round_id = p_round_id and s.player_id <> r.reader_id
+          and not (s.player_id = any (r.former_reader_ids)) and p.state <> 'removed') then
     update public.rounds set state = 'adjudicating', state_version = state_version + 1 where id = p_round_id;
   else
     perform private.shuffle_round(p_round_id);
@@ -465,6 +475,14 @@ begin
            reader_skipped = false,
            state_version = state_version + 1
      where id = p_round_id;
+    -- Before the shuffle, drop what either of them wrote: the outgoing
+    -- reader's text was a rewording of the answer, and the incoming reader's
+    -- was a guess that must not now be read out as the answer. The new reader
+    -- may reword the definition themselves, or leave the card's wording.
+    if r.state in ('collecting', 'adjudicating') then
+      delete from public.submissions
+       where round_id = p_round_id and player_id in (r.reader_id, p_new_reader);
+    end if;
     -- Whoever takes the role learns the answer, so they stop being a voter.
     -- (The outgoing reader never was one.)
     if r.settled_at is null then
@@ -708,7 +726,9 @@ begin
         from public.shuffled_definitions d
         join public.shuffled_private sp on sp.definition_id = d.id
        where d.round_id = r.id;
-      v_round := v_round || jsonb_build_object('definitions', v_defs);
+      v_round := v_round || jsonb_build_object(
+        'definitions', v_defs,
+        'card_definition', (select definition from public.round_secrets where round_id = r.id));
 
     elsif r.state in ('reveal', 'results') then
       -- Each definition carries only what its reveal stage allows:
@@ -744,6 +764,8 @@ begin
          where room_id = room.id and game_number = room.game_number and player_id = me.id;
         v_round := v_round || jsonb_build_object(
           'is_final', private.is_final(room, r),
+          -- the card's own wording, in case the reader reworded it
+          'card_definition', (select definition from public.round_secrets where round_id = r.id),
           'reader_bonus', exists (select 1 from public.score_events e
                                    where e.round_id = r.id and e.category = 'READER_BONUS'),
           'written_correct', (

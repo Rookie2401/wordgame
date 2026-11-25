@@ -48,29 +48,28 @@ describe('the four worked examples', () => {
     expect(matthew.round.my_result).toMatchObject({ round_points: 4, previous: 0, total: 4 });
   });
 
-  it('B: five voters, none right, three fooled by the reader and two by Sarah: reader 6 (3 + bonus 3), Sarah 2', async () => {
+  // The brief's example B had the reader earn points from a false definition of their own. By the owner's later
+  // decision the reader does not write one: what the reader submits is the real definition in their own words.
+  // The example is kept in that form: nobody is right, so the reader earns the bonus and nothing else.
+  it('B: five voters, none right, three fooled by Sarah and two by Ann: reader 3 (bonus only), Sarah 3, Ann 2', async () => {
     const t = await scoredTable(db, 6, { names: ['Reader', 'Sarah', 'Ann', 'Ben', 'Cat', 'Dan'] });
     const ctx = await quickRound(t, {
-      readerWrites: 'the reader’s false definition',
       votes: {
-        1: 'the reader’s false definition', // Sarah
+        1: LIE(2), // Sarah -> Ann
         2: LIE(1), // Ann -> Sarah
         3: LIE(1), // Ben -> Sarah
-        4: 'the reader’s false definition', // Cat
-        5: 'the reader’s false definition', // Dan
+        4: LIE(1), // Cat -> Sarah
+        5: LIE(2), // Dan -> Ann
       },
     });
     const snap: any = await t.state(0);
-    expect(totals(snap)).toEqual({ Reader: 6, Sarah: 2, Ann: 0, Ben: 0, Cat: 0, Dan: 0 });
+    expect(totals(snap)).toEqual({ Reader: 3, Sarah: 3, Ann: 2, Ben: 0, Cat: 0, Dan: 0 });
     expect(snap.round.reader_bonus).toBe(true);
-    expect(await items(t, 0)).toEqual([['SUCCESSFUL_DECEPTION', 3, ['Cat', 'Dan', 'Sarah']], ['READER_BONUS', 3, null]]);
-    expect(await items(t, 1)).toEqual([['SUCCESSFUL_DECEPTION', 2, ['Ann', 'Ben']]]);
+    expect(await items(t, 0)).toEqual([['READER_BONUS', 3, null]]);
+    expect(await items(t, 1)).toEqual([['SUCCESSFUL_DECEPTION', 3, ['Ann', 'Ben', 'Cat']]]);
     expect(await categories(ctx.roundId)).toEqual(
       Array(5).fill('SUCCESSFUL_DECEPTION').concat('READER_BONUS').sort(),
     );
-    // the ballot marked the reader's definition as the reader's
-    const defs = ((await t.state(3)) as any).round.definitions as any[];
-    expect(defs.find((d) => d.text === 'the reader’s false definition')).toMatchObject({ by_reader: true, is_correct: false });
   });
 
   it('C: Sarah’s written definition is accepted: Sarah 3, she does not vote, her text is not on the ballot, no reader bonus', async () => {

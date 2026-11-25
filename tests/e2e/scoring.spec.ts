@@ -47,8 +47,8 @@ const TRUE = 'TRUE';
 interface RoundPlan {
   /** Whose written definition the reader accepts as correct, if anyone's. */
   scholar?: string;
-  /** Does the reader add a bluff of their own? */
-  readerBluffs?: boolean;
+  /** Does the reader put the definition in their own words? */
+  readerRewords?: boolean;
   /** voter name -> TRUE or the name of the player whose bluff they pick. */
   votes: Record<string, string>;
   /** A voter who first votes for something else, then changes to the planned vote. */
@@ -114,11 +114,11 @@ test('six players play a scored game to the target, see the winner, and play aga
 
   // --- Six rounds: one full rotation. Readers go in joining order.
   const plans: RoundPlan[] = [
-    // 1. Reader Daniel adds a bluff. Staged reveal. Matthew changes his vote.
+    // 1. Reader Daniel rewords the definition. Staged reveal. Matthew changes his vote.
     {
-      readerBluffs: true,
+      readerRewords: true,
       staged: true,
-      votes: { Sarah: TRUE, Matthew: 'Daniel', Elizabeth: 'Sarah', James: 'Sarah', William: TRUE },
+      votes: { Sarah: TRUE, Matthew: 'Sarah', Elizabeth: 'Sarah', James: 'Sarah', William: TRUE },
       changes: { voter: 'Matthew', first: TRUE },
     },
     // 2. Reader Sarah accepts Elizabeth's written definition as correct.
@@ -144,7 +144,9 @@ test('six players play a scored game to the target, see the winner, and play aga
     const players = table.filter((s) => s !== reader);
     const truth = `The genuine meaning of word number ${k}.`;
     const bluff = (who: string) => `${who}'s invention for round ${k}`;
-    const textOf = (target: string) => (target === TRUE ? truth : bluff(target));
+    // What is read out and voted on as the genuine definition.
+    const shown = plan.readerRewords ? `Word number ${k}, as ${reader.name} would put it.` : truth;
+    const textOf = (target: string) => (target === TRUE ? shown : bluff(target));
 
     // Card (physical mode: the reader types it in).
     await expect(reader.page.getByTestId('reader-banner')).toBeVisible();
@@ -162,11 +164,11 @@ test('six players play a scored game to the target, see the winner, and play aga
         await s.page.getByRole('button', { name: 'Submit Definition' }).click();
       }),
     );
-    if (plan.readerBluffs) {
-      await reader.page.getByLabel(/Your own false definition/).fill(bluff(reader.name));
-      await reader.page.getByRole('button', { name: 'Submit Definition' }).click();
+    if (plan.readerRewords) {
+      await reader.page.getByLabel(/Reword the definition/).fill(shown);
+      await reader.page.getByRole('button', { name: 'Use My Wording' }).click();
     } else {
-      await reader.page.getByRole('button', { name: 'Skip', exact: true }).click();
+      await reader.page.getByRole('button', { name: 'Use the Card’s Wording' }).click();
     }
 
     // Adjudication: the reader sees the others' definitions without names.
@@ -191,7 +193,8 @@ test('six players play a scored game to the target, see the winner, and play aga
     }
 
     // Reading: shuffled once; the accepted definition is not read out.
-    const expectedCount = 6 - (plan.scholar ? 1 : 0) + (plan.readerBluffs ? 1 : 0);
+    // The reader's wording replaces the card's; it never adds an entry.
+    const expectedCount = 6 - (plan.scholar ? 1 : 0);
     await expect(reader.page.getByTestId('definition')).toHaveCount(expectedCount);
     const order = (await reader.page.getByTestId('definition').allInnerTexts()).map((t) => t.replace(/\s+/g, ' ').trim());
     if (plan.scholar) expect(order.join('|')).not.toContain('the genuine meaning of word number');
@@ -323,7 +326,9 @@ test('six players play a scored game to the target, see the winner, and play aga
       const texts = (await revealed.allInnerTexts()).map((t) => t.replace(/\s+/g, ' ').trim());
       texts.forEach((t, i) => expect(t.startsWith(order[i])).toBe(true));
       await expect(s.page.locator('[data-testid="revealed"][data-correct="true"]')).toHaveCount(1);
-      await expect(s.page.locator('[data-correct="true"]')).toContainText(truth);
+      await expect(s.page.locator('[data-correct="true"]')).toContainText(shown);
+      if (plan.readerRewords) await expect(s.page.getByTestId('card-wording')).toContainText(truth);
+      else await expect(s.page.getByTestId('card-wording')).toHaveCount(0);
       const g = gained[s.name] ?? 0;
       await expect(s.page.getByTestId('round-points')).toHaveText(`${g > 0 ? '+' : ''}${g} ${g === 1 ? 'Point' : 'Points'}`);
       await expect(s.page.getByTestId('my-total')).toHaveText(String(totals[s.name]));

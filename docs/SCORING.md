@@ -47,7 +47,7 @@ your own definition are each refused.
 | For | Points |
 | --- | ---: |
 | Voting for the genuine definition | 2 |
-| Each vote your false definition receives (the reader's included) | 1 |
+| Each vote your false definition receives | 1 |
 | A written definition the reader accepts as correct | 3 |
 | Reader bonus | 3 |
 
@@ -55,6 +55,22 @@ The reader bonus needs all of: at least one vote cast; no vote for the genuine d
 abstaining; nobody's written definition accepted. Identical false definitions stay separate entries and score
 separately. The values are stored on the room when the game starts (`rooms.ruleset`), so a later change to the
 defaults cannot alter a game in progress.
+
+## The reader's wording
+
+The reader does not write a false definition. While the others write, the reader may put the real definition in
+their own words (to hide the dictionary's style) or keep the card's wording. If they reword it, their text takes
+the card definition's place: it is the entry that is read out, voted on and revealed as correct, and there is
+still exactly one correct entry on the ballot. The reader earns nothing from votes for it; the reader's only
+points are the bonus for fooling the whole table. At the reveal everyone is also shown the card's own wording.
+This applies to traditional rooms too.
+
+The brief's example B, where the reader earns points from a false definition of their own, no longer applies
+under this rule.
+
+If the reader changes before the definitions are shuffled, anything the outgoing reader wrote (a rewording of the
+answer) and anything the incoming reader wrote (a guess made before they knew the answer) is discarded, so a
+guess can never be read out as the correct definition. The new reader chooses a wording afresh.
 
 ## Settlement
 

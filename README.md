@@ -16,7 +16,7 @@ the standings. A traditional mode keeps voting aloud and scores on paper.
 
 | Part | State |
 | --- | --- |
-| Game engine (SQL), both card modes, traditional and scored play | Built; 159 unit and database tests pass |
+| Game engine (SQL), both card modes, traditional and scored play | Built; 165 unit and database tests pass |
 | Interface, all screens | Built; checked at phone, tablet and desktop sizes |
 | Traditional game: five browsers, reconnection, expiry | Passes locally; passed against production on 2026-11-24 |
 | Scored game: six browsers, voting, scoring, target ending, rematch | Passes locally; **not yet run against production** |

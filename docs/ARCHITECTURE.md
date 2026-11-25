@@ -89,7 +89,7 @@ on their own screen.
 | Reader disconnects | Host reassigns the round, or the reader's leaving passes it on |
 | Host disconnects | Any player may take over after a minute |
 | Simultaneous submissions / submit during close | Serialised by the room lock; the late one gets "submissions closed" |
-| Reader skips their bluff | Allowed; correct definition still included once |
+| Reader rewords the definition, or not | Their wording replaces the card's as the one correct entry; otherwise the card's wording is used |
 | Player submits the true definition | Kept as their own entry, credited to them |
 | Identical definitions | Kept as separate entries, each credited |
 | Accidental Reveal | Confirmation dialog first |

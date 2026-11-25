@@ -301,26 +301,28 @@ export function ReaderSubmit({ s, round, room }: Props) {
           <DefinitionField
             value={text}
             onChange={setText}
-            label="Your own false definition (optional)"
-            placeholder="Invent a convincing meaning, or skip."
+            label="Reword the definition in your own words (optional)"
+            placeholder="Disguise the dictionary style, keeping the meaning. Yours will be read out as the correct definition."
           />
           {error && <Notice tone="warn">{error}</Notice>}
           <div className="stack">
             <Button type="submit" working={room.busy === 'submit_definition'}>
-              Submit Definition
+              Use My Wording
             </Button>
             <Button variant="secondary" working={room.busy === 'reader_skip'} onClick={skip}>
-              Skip
+              Use the Card’s Wording
             </Button>
           </div>
         </form>
       ) : (
         <div className="stack">
           <p className="confirmed" data-testid="reader-status">
-            {round.my_submission != null ? 'Your false definition is in.' : 'You are not adding a definition.'}
+            {round.my_submission != null
+              ? 'Your wording will be read as the correct definition.'
+              : 'The card’s wording will be read as the correct definition.'}
           </p>
           <Button variant="quiet" onClick={() => setEditing(true)}>
-            {round.my_submission != null ? 'Edit my definition' : 'Write one after all'}
+            {round.my_submission != null ? 'Edit my wording' : 'Reword it after all'}
           </Button>
         </div>
       )}
@@ -482,7 +484,9 @@ export function Reveal({ s, round, room }: Props) {
             <span className="letter">{letterFor(d.position)}.</span> {d.text}
             <span className="attribution">
               {d.is_correct
-                ? 'Correct Definition.'
+                ? round.card_definition && round.card_definition !== d.text
+                  ? `Correct Definition, in ${round.reader_name}’s words. On the card: ${round.card_definition}`
+                  : 'Correct Definition.'
                 : d.by_reader
                   ? 'Submitted by the Reader.'
                   : `Submitted by ${d.author_name ?? 'a player who has left'}.`}

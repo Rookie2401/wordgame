@@ -288,6 +288,11 @@ function RevealedItem(props: { d: DefinitionItem; round: RoundInfo; showPoints: 
               : `Written by ${d.author_name ?? 'a player who has left'}.`}
         </span>
       )}
+      {known && d.is_correct && round.card_definition && round.card_definition !== d.text && (
+        <span className="attribution" data-testid="card-wording">
+          In {round.reader_name}’s words. On the card: {round.card_definition}
+        </span>
+      )}
       {known && showPoints && voters.length > 0 && (
         <span className="attribution earned">
           {d.is_correct

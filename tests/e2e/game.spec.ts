@@ -157,7 +157,7 @@ test('five players play several rounds, reconnect, and the host ends the game', 
       await expect(flaky.page.getByTestId('my-submission')).toHaveText(`${flaky.name}'s guess for round 2`);
     }
 
-    // 8. The reader sees progress but no texts, and adds a bluff (round 1), skips (round 2),
+    // 8. The reader sees progress but no texts, and rewords the definition (round 1), keeps the card's (round 2),
     //    or closes by hand while someone is missing (round 3).
     const expectedTotal = 5;
     await expect(reader.page.getByTestId('progress')).toHaveText(`${absent ? 3 : 4} of ${expectedTotal} players ready.`);
@@ -165,14 +165,15 @@ test('five players play several rounds, reconnect, and the host ends the game', 
     await noSidewaysScroll(reader.page, 'reader submission');
     let count: number;
     if (round === 1) {
-      await reader.page.getByLabel(/Your own false definition/).fill(`${reader.name} bluffs`);
-      await reader.page.getByRole('button', { name: 'Submit Definition' }).click();
-      count = 6;
+      // The reader's own wording takes the card's place: still five definitions, not six.
+      await reader.page.getByLabel(/Reword the definition/).fill(`${reader.name} puts it another way`);
+      await reader.page.getByRole('button', { name: 'Use My Wording' }).click();
+      count = 5;
     } else if (round === 2) {
-      await reader.page.getByRole('button', { name: 'Skip', exact: true }).click();
+      await reader.page.getByRole('button', { name: 'Use the Card’s Wording' }).click();
       count = 5;
     } else {
-      await reader.page.getByRole('button', { name: 'Skip', exact: true }).click();
+      await reader.page.getByRole('button', { name: 'Use the Card’s Wording' }).click();
       await reader.page.getByRole('button', { name: 'Close Submissions' }).click();
       await confirm(reader.page, 'Close Submissions');
       count = 4;
@@ -183,7 +184,9 @@ test('five players play several rounds, reconnect, and the host ends the game', 
     await expect(items).toHaveCount(count);
     const order = (await items.allInnerTexts()).map((t) => t.trim());
     orders.push(order);
-    expect(order.filter((t) => t.endsWith(finalTruth))).toHaveLength(1);
+    const shownTruth = round === 1 ? `${reader.name} puts it another way` : finalTruth;
+    expect(order.filter((t) => t.endsWith(shownTruth))).toHaveLength(1);
+    if (round === 1) expect(order.join('|')).not.toContain(finalTruth); // the card's wording is not read out
     expect(order[0]).toMatch(/^A\./);
     expect(await reader.page.locator('.reading-list').innerText()).not.toMatch(/Submitted by|Correct Definition/);
     for (const s of players) {
@@ -221,12 +224,14 @@ test('five players play several rounds, reconnect, and the host ends the game', 
       // Same order as it was read.
       texts.forEach((t, i) => expect(t.startsWith(order[i].replace(/\s+/g, ' '))).toBe(true));
       await expect(s.page.locator('[data-testid="revealed"][data-correct="true"]')).toHaveCount(1);
-      await expect(s.page.locator('[data-correct="true"]')).toContainText(finalTruth);
-      await expect(s.page.locator('[data-correct="true"]')).toContainText('Correct Definition.');
+      await expect(s.page.locator('[data-correct="true"]')).toContainText(shownTruth);
+      await expect(s.page.locator('[data-correct="true"]')).toContainText('Correct Definition');
+      // When the reader reworded it, the card's own wording is given alongside at the reveal.
+      if (round === 1) await expect(s.page.locator('[data-correct="true"]')).toContainText(`On the card: ${finalTruth}`);
       await expect(s.page.getByText(`Submitted by ${editor.name}.`)).toBeVisible();
       await expect(s.page.getByText(`${editor.name} thought again (${round})`)).toBeVisible();
       await expect(s.page.getByText(`${editor.name}'s guess for round ${round}`)).toHaveCount(0);
-      if (round === 1) await expect(s.page.getByText('Submitted by the Reader.')).toBeVisible();
+      await expect(s.page.getByText('Submitted by the Reader.')).toHaveCount(0);
       await noSidewaysScroll(s.page, 'reveal');
     }
 
@@ -295,10 +300,13 @@ test('physical cards, a late joiner, a replaced reader, a lost session and an ex
   // C loses their session completely; the host issues a rejoin code.
   await c.page.getByLabel('What do you think this word means?').fill('A kind of inquiry');
   await c.page.getByRole('button', { name: 'Submit Definition' }).click();
-  // Everyone still expected has now submitted (the new reader's earlier guess counts as
-  // the reader's own), so the round moves on by itself.
+  await expect(c.page.getByTestId('status')).toHaveText('Definition submitted.');
+  // The new reader's earlier guess was dropped (a reader's text is read out as the answer),
+  // so she chooses a wording now; then the round moves on.
+  await expect(b.page.getByLabel(/Reword the definition/)).toHaveValue('');
+  await b.page.getByRole('button', { name: 'Use the Card’s Wording' }).click();
   await expect(c.page.getByTestId('status')).toHaveText('The reader is presenting the definitions.');
-  await expect(b.page.getByTestId('definition')).toHaveCount(3);
+  await expect(b.page.getByTestId('definition')).toHaveCount(2);
   await host.page.getByTestId('menu').click();
   await host.page.getByRole('button', { name: /^Matthew/ }).click();
   await host.page.getByRole('button', { name: 'Rejoin code' }).click();

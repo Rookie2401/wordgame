@@ -76,6 +76,8 @@ export interface RoundInfo {
   votes_cast?: number;
   my_vote?: string | null;
   voters?: { id: string; name: string; voted: boolean }[];
+  /** The card's own wording, once revealed (the reader may have reworded it). */
+  card_definition?: string | null;
   // Settled round:
   is_final?: boolean;
   reader_bonus?: boolean;

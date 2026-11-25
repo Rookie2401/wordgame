@@ -39,8 +39,8 @@ test('screens', async ({ browser }) => {
   await shot(a, '09-reader-submit');
   await c.getByLabel('What do you think this word means?').fill('The art of mending fishing nets by moonlight.');
   await c.getByRole('button', { name: 'Submit Definition' }).click();
-  await a.getByLabel(/Your own false definition/).fill('A tax once levied upon windows facing the street.');
-  await a.getByRole('button', { name: 'Submit Definition' }).click();
+  await a.getByLabel(/Reword the definition/).fill('A levy once charged on the windows of a house.');
+  await a.getByRole('button', { name: 'Use My Wording' }).click();
   await a.getByTestId('definition').first().waitFor();
   await shot(a, '10-reading');
   await shot(b, '11-reading-waiting');
