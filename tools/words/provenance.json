@@ -1,0 +1,69 @@
+{
+  "source": "Webster's Revised Unabridged Dictionary (1913), Project Gutenberg #29765",
+  "source_url": "https://gutenberg.pglaf.org/2/9/7/6/29765/29765-0.txt",
+  "canonical_url": "https://www.gutenberg.org/ebooks/29765",
+  "sha256": "62f704c4a132e8e5000db86a60e37eb8d2a417dc60c9d413b7da4504b08c0197",
+  "bytes": 15335167,
+  "raw_file": "tools/words/raw/pg29765.txt",
+  "frequency_list": {
+    "used": true,
+    "url": "https://norvig.com/ngrams/count_1w.txt",
+    "sha256": "51df159fd3de12b20e403c108f526e96dbd723d9cabdd5f17955cdc16059e690",
+    "bytes": 4956241,
+    "entries": 333333,
+    "note": "filter only; not redistributed"
+  },
+  "filter_parameters": {
+    "minLen": 5,
+    "maxLen": 16,
+    "defMin": 30,
+    "defMax": 220,
+    "freqTopN": 150000,
+    "veryObscureIfAbsent": true,
+    "targetMax": 4000,
+    "subsetSize": 3000,
+    "prefDef": [
+      50,
+      160
+    ],
+    "prefWord": [
+      7,
+      12
+    ],
+    "sampleRows": 60,
+    "batchSize": 500
+  },
+  "subset_applied": true,
+  "blocklist_terms": 159,
+  "counts": {
+    "1_entries_parsed": 57324,
+    "2_headword_shape_and_length": 49972,
+    "3_unique_headword": 40661,
+    "4_single_sense_pos_ok_not_proper": 31725,
+    "5_definition_rules": 6037,
+    "6_frequency_filter": 4491,
+    "7_blocklist": 4231,
+    "8_deterministic_subset": 3000
+  },
+  "dropped_by_reason": {
+    "headword_length": 4404,
+    "headword_not_single_letters_word": 2948,
+    "homograph_or_repeated_headword": 9311,
+    "pos": 572,
+    "sense": 8345,
+    "proper": 19,
+    "trailing_unpunctuated_name": 1110,
+    "def_length": 10810,
+    "def_contains_headword_stem": 8308,
+    "markup_or_odd_chars": 2471,
+    "taxonomic": 1280,
+    "def_not_sentence": 181,
+    "cross_reference_or_inflection": 1087,
+    "derivable_from_morphology": 345,
+    "formula": 96,
+    "inflection_of_common_word": 245,
+    "common_word_in_top_150k": 1301,
+    "blocklist": 260
+  },
+  "final_rows": 3000
+}

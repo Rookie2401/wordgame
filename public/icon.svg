@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#F4EFE3"/>
+  <rect x="36" y="36" width="440" height="440" rx="28" fill="none" stroke="#B39A68" stroke-width="6"/>
+  <text x="256" y="345" text-anchor="middle" font-family="Garamond, 'EB Garamond', Georgia, serif" font-size="300" font-style="italic" fill="#493522">B</text>
+  <path d="M176 410h160" stroke="#B39A68" stroke-width="5"/>
+  <path d="M256 398l12 12-12 12-12-12z" fill="#B39A68"/>
+</svg>
